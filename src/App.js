@@ -5,6 +5,8 @@ import Logo from "./components/Logo/Logo";
 import ImageLinkForm from "./components/ImageLinkForm/ImageLinkForm";
 import FaceRecognition from "./components/FaceRecognition/FaceRecognition";
 import Rank from "./components/Rank/Rank";
+import SignIn from "./components/SignIn/SignIn";
+import Register from "./components/Register/Register";
 import Particles from "react-particles-js";
 import Clarifai from "clarifai";
 
@@ -31,13 +33,15 @@ class App extends React.Component {
       input: "",
       imageUrl: "",
       box: {},
+      route: "signin",
+      isSignedIn: false
     };
   }
+
   // Handle Text change in form
   onInputChange = (event) => {
     this.setState({ input: event.target.value });
     event.preventDefault();
-    // console.log(event.target.value);
   };
 
   calculateFaceLocation = (data) => {
@@ -46,24 +50,21 @@ class App extends React.Component {
     const image = document.getElementById("inputImage");
     const width = Number(image.width);
     const height = Number(image.height);
-    console.log(width, height);
     return {
       leftCol: clarifaiFace.left_col * width, // Multiply total width by the left col percentage
       topRow: clarifaiFace.top_row * height, // Multiply height by top row percentage
-      rightCol: width - (clarifaiFace.right_col * width), // Subtract total width of picture from the multiplication of total width and right col percentage
-      bottomRow: height - (clarifaiFace.bottom_row * height), // Substract total height of picture from the multiplication of total height and bottom row percentage
+      rightCol: width - clarifaiFace.right_col * width, // Subtract total width of picture from the multiplication of total width and right col percentage
+      bottomRow: height - clarifaiFace.bottom_row * height, // Substract total height of picture from the multiplication of total height and bottom row percentage
     };
   };
 
   displayFaceBox = (box) => {
-    console.log(box);
     this.setState({ box: box });
   };
 
   // Handle Submit button
   onButtonSubmit = () => {
     this.setState({ imageUrl: this.state.input });
-    console.log("click");
     app.models
       .predict(
         Clarifai.FACE_DETECT_MODEL,
@@ -77,18 +78,39 @@ class App extends React.Component {
     // there was an error
   };
 
+  onRouteChange = (route) => {
+    if(route === "signout"){
+      this.setState({isSignedIn: false})
+    } else if (route === "home"){
+      this.setState({isSignedIn: true})
+    }
+    this.setState({ route: route });
+  };
+
   render() {
+    const { isSignedIn, imageUrl, route, box } = this.state;
     return (
       <div className="App">
         <Particles className="particles" params={particlesOptions} />
-        <Navigation />
-        <Logo />
-        <Rank />
-        <ImageLinkForm
-          onInputChange={this.onInputChange}
-          onButtonSubmit={this.onButtonSubmit}
-        />
-        <FaceRecognition imageUrl={this.state.imageUrl} box={this.state.box} />
+        <Navigation onRouteChange={this.onRouteChange} isSignedIn={isSignedIn}/>
+        {route === "home" ? (
+          <div>
+            <Logo />
+            <Rank />
+            <ImageLinkForm
+              onInputChange={this.onInputChange}
+              onButtonSubmit={this.onButtonSubmit}
+            />
+            <FaceRecognition
+              imageUrl={imageUrl}
+              box={box}
+            />
+          </div>
+        ) : ( 
+          route === 'signin' ? <SignIn onRouteChange={this.onRouteChange} /> : 
+          <Register onRouteChange={this.onRouteChange} />
+          
+        )}
       </div>
     );
   }
