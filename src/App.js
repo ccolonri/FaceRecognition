@@ -34,8 +34,28 @@ class App extends React.Component {
       imageUrl: "",
       box: {},
       route: "signin",
-      isSignedIn: false
+      isSignedIn: false,
+      user: {
+        id: '',
+        name: '',
+        email: '',
+        entries: 0,
+        joined: ''
+      }
     };
+  }
+
+  // loads user profile on site
+  loadUser = (data) => {
+    this.setState({
+      user: {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      entries: data.entries,
+      joined: data.joined
+      }
+    })
   }
 
   // Handle Text change in form
@@ -63,7 +83,7 @@ class App extends React.Component {
   };
 
   // Handle Submit button
-  onButtonSubmit = () => {
+  onPictureSubmit = () => {
     this.setState({ imageUrl: this.state.input });
     app.models
       .predict(
@@ -72,8 +92,29 @@ class App extends React.Component {
         this.state.input,
       )
       .then((response) => {
+        if(response){
+          fetch('http://localhost:3000/image',  
+          {
+            method: 'put',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              id: this.state.user.id
+            })
+        })
+        .then(response => response.json())
+        .then(user => {
+          console.log(user);
+          // console.log(count);
+          this.setState(prevstate => ({
+            user: {
+              ...prevstate.user,
+              entries: user.entries
+            }
+          }))
+        })
         this.displayFaceBox(this.calculateFaceLocation(response));
-      })
+      }
+    })
       .catch((err) => console.log(err));
     // there was an error
   };
@@ -96,10 +137,10 @@ class App extends React.Component {
         {route === "home" ? (
           <div>
             <Logo />
-            <Rank />
+            <Rank  name={this.state.user.name}  entries={this.state.user.entries}/>
             <ImageLinkForm
               onInputChange={this.onInputChange}
-              onButtonSubmit={this.onButtonSubmit}
+              onButtonSubmit={this.onPictureSubmit}
             />
             <FaceRecognition
               imageUrl={imageUrl}
@@ -107,8 +148,8 @@ class App extends React.Component {
             />
           </div>
         ) : ( 
-          route === 'signin' ? <SignIn onRouteChange={this.onRouteChange} /> : 
-          <Register onRouteChange={this.onRouteChange} />
+          route === 'signin' ? <SignIn onRouteChange={this.onRouteChange} loadUser={this.loadUser} /> : 
+          <Register onRouteChange={this.onRouteChange} loadUser={this.loadUser} />
           
         )}
       </div>
