@@ -8,7 +8,6 @@ import Rank from "./components/Rank/Rank";
 import SignIn from "./components/SignIn/SignIn";
 import Register from "./components/Register/Register";
 import Particles from "react-particles-js";
-import Clarifai from "clarifai";
 
 const particlesOptions = {
   particles: {
@@ -22,38 +21,38 @@ const particlesOptions = {
   },
 };
 
-const app = new Clarifai.App({
-  apiKey: "9746f7bfb7ee4c26b89559ced8f7e9c8",
-});
+
+
+const initialState = {
+  input: "",
+  imageUrl: "",
+  box: {},
+  route: "signin",
+  isSignedIn: false,
+  user: {
+    id: '',
+    name: '',
+    email: '',
+    entries: 0,
+    joined: ''
+  }
+};
 
 class App extends React.Component {
   constructor() {
     super();
-    this.state = {
-      input: "",
-      imageUrl: "",
-      box: {},
-      route: "signin",
-      isSignedIn: false,
-      user: {
-        id: '',
-        name: '',
-        email: '',
-        entries: 0,
-        joined: ''
-      }
-    };
+    this.state = initialState;
   }
 
   // loads user profile on site
   loadUser = (data) => {
     this.setState({
       user: {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      entries: data.entries,
-      joined: data.joined
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        entries: data.entries,
+        joined: data.joined
       }
     })
   }
@@ -85,45 +84,46 @@ class App extends React.Component {
   // Handle Submit button
   onPictureSubmit = () => {
     this.setState({ imageUrl: this.state.input });
-    app.models
-      .predict(
-        Clarifai.FACE_DETECT_MODEL,
-        // URL
-        this.state.input,
-      )
+    fetch('http://localhost:3000/imageUrl',
+      {
+        method: 'post',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: this.state.input
+        })
+      })
+      .then((response => response.json()))
       .then((response) => {
-        if(response){
-          fetch('http://localhost:3000/image',  
-          {
-            method: 'put',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              id: this.state.user.id
+        if (response) {
+          fetch('http://localhost:3000/image',
+            {
+              method: 'put',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: this.state.user.id
+              })
             })
-        })
-        .then(response => response.json())
-        .then(user => {
-          console.log(user);
-          // console.log(count);
-          this.setState(prevstate => ({
-            user: {
-              ...prevstate.user,
-              entries: user.entries
-            }
-          }))
-        })
-        this.displayFaceBox(this.calculateFaceLocation(response));
-      }
-    })
-      .catch((err) => console.log(err));
+            .then(response => response.json())
+            .then(count => {
+              this.setState(prevstate => ({
+                user: {
+                  ...prevstate.user,
+                  entries: count
+                }
+              }))
+            })
+            .catch(console.log)
+          this.displayFaceBox(this.calculateFaceLocation(response));
+        }
+      }).catch((err) => console.log(err));
     // there was an error
   };
 
   onRouteChange = (route) => {
-    if(route === "signout"){
-      this.setState({isSignedIn: false})
-    } else if (route === "home"){
-      this.setState({isSignedIn: true})
+    if (route === "signout") {
+      this.setState(initialState)
+    } else if (route === "home") {
+      this.setState({ isSignedIn: true })
     }
     this.setState({ route: route });
   };
@@ -133,11 +133,11 @@ class App extends React.Component {
     return (
       <div className="App">
         <Particles className="particles" params={particlesOptions} />
-        <Navigation onRouteChange={this.onRouteChange} isSignedIn={isSignedIn}/>
+        <Navigation onRouteChange={this.onRouteChange} isSignedIn={isSignedIn} />
         {route === "home" ? (
           <div>
             <Logo />
-            <Rank  name={this.state.user.name}  entries={this.state.user.entries}/>
+            <Rank name={this.state.user.name} entries={this.state.user.entries} />
             <ImageLinkForm
               onInputChange={this.onInputChange}
               onButtonSubmit={this.onPictureSubmit}
@@ -147,26 +147,14 @@ class App extends React.Component {
               box={box}
             />
           </div>
-        ) : ( 
-          route === 'signin' ? <SignIn onRouteChange={this.onRouteChange} loadUser={this.loadUser} /> : 
-          <Register onRouteChange={this.onRouteChange} loadUser={this.loadUser} />
-          
-        )}
+        ) : (
+            route === 'signin' ? <SignIn onRouteChange={this.onRouteChange} loadUser={this.loadUser} /> :
+              <Register onRouteChange={this.onRouteChange} loadUser={this.loadUser} />
+
+          )}
       </div>
     );
   }
 }
 
 export default App;
-
-// app.models
-// .predict(
-// Clarifai.COLOR_MODEL,
-//     // URL
-//     "https://samples.clarifai.com/metro-north.jpg"
-// )
-// .then(function(response) {
-//     // do something with responseconsole.log(response);
-//     },
-//     function(err) {// there was an error}
-// );
